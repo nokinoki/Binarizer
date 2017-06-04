@@ -1,0 +1,7 @@
+D:\Users\Akinobu\OneDrive - Aichi Public University Corporation\学部3年生\応用\4.Pic\Binarizer\Binarization\bin\Release\Binarization.exe.config
+D:\Users\Akinobu\OneDrive - Aichi Public University Corporation\学部3年生\応用\4.Pic\Binarizer\Binarization\bin\Release\Binarization.exe
+D:\Users\Akinobu\OneDrive - Aichi Public University Corporation\学部3年生\応用\4.Pic\Binarizer\Binarization\bin\Release\Binarization.pdb
+D:\Users\Akinobu\OneDrive - Aichi Public University Corporation\学部3年生\応用\4.Pic\Binarizer\Binarization\bin\Release\System.ValueTuple.dll
+D:\Users\Akinobu\OneDrive - Aichi Public University Corporation\学部3年生\応用\4.Pic\Binarizer\Binarization\obj\Release\Binarization.csprojResolveAssemblyReference.cache
+D:\Users\Akinobu\OneDrive - Aichi Public University Corporation\学部3年生\応用\4.Pic\Binarizer\Binarization\obj\Release\Binarization.exe
+D:\Users\Akinobu\OneDrive - Aichi Public University Corporation\学部3年生\応用\4.Pic\Binarizer\Binarization\obj\Release\Binarization.pdb
