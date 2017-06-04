@@ -13,7 +13,7 @@ namespace Binarization {
         public int W = 0, H = 0;
         public Color[,] Buffer;
 
-        public Cell(ref Color[,] buffer) {
+        public Cell(Color[,] buffer) {
             W = buffer.GetLength(0);
             H = buffer.GetLength(1);
             Buffer = buffer;

@@ -23,7 +23,7 @@ namespace Binarization{
             args = new string[] {
                 @".\5000c.jpg",
                 "--var",
-                "128x128;otsu"
+                "128x128;delta"
             };
 #endif
             FetchArgments(args);
@@ -31,27 +31,27 @@ namespace Binarization{
             // Process
             switch (Mode) {
                 case "--static": {
-                        Cell cell = new Cell(ref Buffer);
+                        Cell cell = new Cell(Buffer);
                         cell.ProcessStatic(int.Parse(Param));
                     }
                     break;
                 case "--p": {
-                        Cell cell = new Cell(ref Buffer);
+                        Cell cell = new Cell(Buffer);
                         cell.ProcessP(double.Parse(Param));
                     }
                     break;
                 case "--mode": {
-                        Cell cell = new Cell(ref Buffer);
+                        Cell cell = new Cell(Buffer);
                         cell.ProcessMode();
                     }
                     break;
                 case "--delta": {
-                        Cell cell = new Cell(ref Buffer);
+                        Cell cell = new Cell(Buffer);
                         cell.ProcessDelta();
                     }
                     break;
                 case "--otsu": {
-                        Cell cell = new Cell(ref Buffer);
+                        Cell cell = new Cell(Buffer);
                         cell.ProcessOtsu();
                     }
                     break;
@@ -116,7 +116,7 @@ namespace Binarization{
                     for (int i = 0; i < subBuffers.GetLength(0); i++) {
                         for (int j = 0; j < subBuffers.GetLength(1); j++) {
                             Color[,] subBuffer = subBuffers[i,j];
-                            Cell cell = new Cell(ref subBuffer);
+                            Cell cell = new Cell(subBuffer);
                             Console.WriteLine("{0}x{1} / {2}x{3}", i, j, subBuffers.GetLength(0), subBuffers.GetLength(1));
                             switch (Param.Split(';')[1]) {
                                 case "static": 
@@ -141,6 +141,7 @@ namespace Binarization{
                         }
                     }
 #endif
+                    // Colorは構造体なので値渡し，故に書き戻しが必要
                     Merge(subBuffers);
                     break;
                 default:
@@ -152,7 +153,45 @@ namespace Binarization{
             Console.ReadKey();
         }
 
+        static void ShowHelp() {
+            Console.WriteLine(
+@"画像を二値化して保存します．
+
+Binarization FilePath Mode [Param]
+
+  Mode
+    --static
+      固定値閾値
+      Param
+        border
+        border: int
+    --p
+      割合で閾値決定
+      Param
+        rate
+        rate: float
+    --mode
+      ピークを検出して閾値
+    --delta
+      変化量最高点を閾値
+    --otsu
+      大津アルゴリズムで閾値
+    --var
+      小区間に分割しそれぞれで二値化
+      Param
+        wxh;submode;subparam
+        w, h: int
+        subparam: Mode
+        subparam: Pram
+");
+        }
+
         static void FetchArgments(string[] args) {
+            if (args.Length < 1 || args[0] == "--help") {
+                ShowHelp();
+                Console.ReadKey();
+                Environment.Exit(0);
+            }
             if (args.Length < 3) {
                 Console.WriteLine("Invald Argments");
                 Console.ReadKey();
@@ -189,7 +228,7 @@ namespace Binarization{
         }
 
         static Color[,][,] SliceBuffer(int w, int h) {
-            // 画素を分割 （8x8pxごとに分割）
+            // 画素を分割 （wxh pxごとに分割）
             int cellW = w;
             int cellH = h;
             int cellCountW = W % cellW > 0 ? W / cellW + 1 : W / cellW;
