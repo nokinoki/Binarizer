@@ -178,6 +178,38 @@ namespace Binarization {
             }
         }
 
+        public void AcceptFilter(Filter filter) {
+            // 適用
+            double[,] delta = new double[W, H];
+            for (int x = 0; x < W - filter.W; x++) {
+                for (int y = 0; y < H - filter.H; y++) {
+                    double horizonalCenter = 0;
+                    double varticalCenter = 0;
+                    for (int fx = 0; fx < filter.W; fx++) {
+                        for (int fy = 0; fy < filter.H; fy++) {
+                            horizonalCenter += filter.Matrix[fx, fy] * GetLuminunce(Buffer[x + fx, y + fy]);
+                            varticalCenter += filter.Matrix[fy, fx] * GetLuminunce(Buffer[x + fx, y + fy]);
+                        }
+                    }
+                    delta[x + filter.W / 2, y + filter.H / 2] = Math.Sqrt(Math.Pow(horizonalCenter,2)+Math.Pow(varticalCenter,2));
+                }
+            }
+            // 正規化
+            double deltaMax = 0;
+            for (int i = 0; i < delta.GetLength(0); i++) {
+                for (int j = 0; j < delta.GetLength(1); j++) {
+                    deltaMax = deltaMax < delta[i, j] ? delta[i, j] : deltaMax;
+                }
+            }
+            // Bufferに書き戻し
+            for (int i = 0; i < W; i++) {
+                for (int j = 0; j < H; j++) {
+                    int luminuce = (int)(delta[i, j] * 255 / deltaMax);
+                    Buffer[i, j] = Color.FromArgb(luminuce, luminuce, luminuce);
+                }
+            }
+        }
+
         int GetLuminunce(Color pixel) {
             int luminuce = (int)(0.2126 * pixel.R + 0.7152 * pixel.G + 0.0722 * pixel.B);
             if (luminuce > 255) luminuce = 255;

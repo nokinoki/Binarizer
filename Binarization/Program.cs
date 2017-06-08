@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Diagnostics;
+using System.Threading;
 
 namespace Binarization{
     class Program{
@@ -21,15 +22,20 @@ namespace Binarization{
         static void Main(string[] args) {
 #if DEBUG
             args = new string[] {
+                //@"..\..\..\..\P25\P21.png",
                 @".\5000c.jpg",
-                "--var",
-                "128x128;delta"
+                "--filter",
+                //"16x10;otsu"
+                "laplacian"
             };
 #endif
             FetchArgments(args);
             LoadImage();
             // Process
             switch (Mode) {
+                case "--test":
+                    Console.WriteLine("Test mode...");
+                    break;
                 case "--static": {
                         Cell cell = new Cell(Buffer);
                         cell.ProcessStatic(int.Parse(Param));
@@ -57,100 +63,113 @@ namespace Binarization{
                     break;
                 case "--var":
                     Color[,][,] subBuffers = SliceBuffer(int.Parse(Param.Split(';')[0].Split('x')[0]), int.Parse(Param.Split(';')[0].Split('x')[1]));
-#if MultiThread
-                    List<Thread> processes = new List<Thread>();
-                    for (int i = 0; i < subBuffers.GetLength(0); i++) {
-                        for (int j = 0; j < subBuffers.GetLength(1); j++) {
-                            Color[,] subBuffer = subBuffers[i,j];
-                            Cell cell = new Cell(ref subBuffer);
-                            ThreadStart func;
-                            switch (Param.Split(';')[1]) {
-                                case "static":
-                                    func = () => {
-                                        cell.ProcessStatic(int.Parse(Param.Split(';')[2]));
-                                        Console.WriteLine("{0}x{1} / {2}x{3}", i, j, subBuffers.GetLength(0), subBuffers.GetLength(1));
-                                    };
-                                    processes.Add(new Thread(func));
-                                    break;
-                                case "p":
-                                    func = () => {
-                                        cell.ProcessP(double.Parse(Param.Split(';')[2]));
-                                        Console.WriteLine("{0}x{1} / {2}x{3}", i, j, subBuffers.GetLength(0), subBuffers.GetLength(1));
-                                    };
-                                    processes.Add(new Thread(func));
-                                    break;
-                                case "mode":
-                                    func = () => {
-                                        cell.ProcessMode();
-                                        Console.WriteLine("{0}x{1} / {2}x{3}", i, j, subBuffers.GetLength(0), subBuffers.GetLength(1));
-                                    };
-                                    processes.Add(new Thread(func));
-                                    break;
-                                case "delta":
-                                    func = () => {
-                                        cell.ProcessDelta();
-                                        Console.WriteLine("{0}x{1} / {2}x{3}", i, j, subBuffers.GetLength(0), subBuffers.GetLength(1));
-                                    };
-                                    processes.Add(new Thread(func));
-                                    break;
-                                case "otsu":
-                                    func = () => {
-                                        cell.ProcessOtsu();
-                                        Console.WriteLine("{0}x{1} / {2}x{3}", i, j, subBuffers.GetLength(0), subBuffers.GetLength(1));
-                                    };
-                                    processes.Add(new Thread(func));
-                                    break;
-                                default:
-                                    Console.WriteLine("Invaild mode");
-                                    break;
-                            }
-                        }
-                    }
-                    for (int i = 0; i < processes.Count(); i++) {
-                        processes[i].Start();
-                    }
-                    for (int i = 0; i < processes.Count(); i++) {
-                        processes[i].Join();
-                    }
+#if !MultiThread
+                    DivideAsync(subBuffers);
 #else
-                    for (int i = 0; i < subBuffers.GetLength(0); i++) {
-                        for (int j = 0; j < subBuffers.GetLength(1); j++) {
-                            Color[,] subBuffer = subBuffers[i,j];
-                            Cell cell = new Cell(subBuffer);
-                            Console.WriteLine("{0}x{1} / {2}x{3}", i, j, subBuffers.GetLength(0), subBuffers.GetLength(1));
-                            switch (Param.Split(';')[1]) {
-                                case "static": 
-                                        cell.ProcessStatic(int.Parse(Param.Split(';')[2]));
-                                    break;
-                                case "p": 
-                                        cell.ProcessP(double.Parse(Param.Split(';')[2]));
-                                    break;
-                                case "mode": 
-                                        cell.ProcessMode();
-                                    break;
-                                case "delta": 
-                                        cell.ProcessDelta();
-                                    break;
-                                case "otsu": 
-                                        cell.ProcessOtsu();
-                                    break;
-                                default:
-                                    Console.WriteLine("Invaild mode");
-                                    break;
-                            }
-                        }
-                    }
+                    Divide(subBuffers);
 #endif
                     // Colorは構造体なので値渡し，故に書き戻しが必要
                     Merge(subBuffers);
                     break;
-                default:
+                case "--filter": {
+                        Cell cell = new Cell(Buffer);
+                        cell.AcceptFilter(Filter.FromName(Param));
+                        break;
+                    }
+            default:
                     Console.WriteLine("Invaild mode");
                     break;
             }
             Console.WriteLine("Processed.");
             SaveImage();
             Console.ReadKey();
+        }
+
+        static void DivideAsync(Color[,][,] subBuffers) {
+            List<Thread> processes = new List<Thread>();
+            for (int i = 0; i < subBuffers.GetLength(0); i++) {
+                for (int j = 0; j < subBuffers.GetLength(1); j++) {
+                    Color[,] subBuffer = subBuffers[i, j];
+                    Cell cell = new Cell(subBuffer);
+                    ThreadStart func;
+                    switch (Param.Split(';')[1]) {
+                        case "static":
+                            func = () => {
+                                cell.ProcessStatic(int.Parse(Param.Split(';')[2]));
+                                Console.WriteLine("{0}x{1} / {2}x{3}", i, j, subBuffers.GetLength(0), subBuffers.GetLength(1));
+                            };
+                            processes.Add(new Thread(func));
+                            break;
+                        case "p":
+                            func = () => {
+                                cell.ProcessP(double.Parse(Param.Split(';')[2]));
+                                Console.WriteLine("{0}x{1} / {2}x{3}", i, j, subBuffers.GetLength(0), subBuffers.GetLength(1));
+                            };
+                            processes.Add(new Thread(func));
+                            break;
+                        case "mode":
+                            func = () => {
+                                cell.ProcessMode();
+                                Console.WriteLine("{0}x{1} / {2}x{3}", i, j, subBuffers.GetLength(0), subBuffers.GetLength(1));
+                            };
+                            processes.Add(new Thread(func));
+                            break;
+                        case "delta":
+                            func = () => {
+                                cell.ProcessDelta();
+                                Console.WriteLine("{0}x{1} / {2}x{3}", i, j, subBuffers.GetLength(0), subBuffers.GetLength(1));
+                            };
+                            processes.Add(new Thread(func));
+                            break;
+                        case "otsu":
+                            func = () => {
+                                cell.ProcessOtsu();
+                                Console.WriteLine("{0}x{1} / {2}x{3}", i, j, subBuffers.GetLength(0), subBuffers.GetLength(1));
+                            };
+                            processes.Add(new Thread(func));
+                            break;
+                        default:
+                            Console.WriteLine("Invaild mode");
+                            break;
+                    }
+                }
+            }
+            for (int i = 0; i < processes.Count(); i++) {
+                processes[i].Start();
+            }
+            for (int i = 0; i < processes.Count(); i++) {
+                processes[i].Join();
+            }
+        }
+
+        static void Divide(Color[,][,] subBuffers) {
+            for (int i = 0; i < subBuffers.GetLength(0); i++) {
+                for (int j = 0; j < subBuffers.GetLength(1); j++) {
+                    Color[,] subBuffer = subBuffers[i, j];
+                    Cell cell = new Cell(subBuffer);
+                    Console.WriteLine("{0}x{1} / {2}x{3}", i, j, subBuffers.GetLength(0), subBuffers.GetLength(1));
+                    switch (Param.Split(';')[1]) {
+                        case "static":
+                            cell.ProcessStatic(int.Parse(Param.Split(';')[2]));
+                            break;
+                        case "p":
+                            cell.ProcessP(double.Parse(Param.Split(';')[2]));
+                            break;
+                        case "mode":
+                            cell.ProcessMode();
+                            break;
+                        case "delta":
+                            cell.ProcessDelta();
+                            break;
+                        case "otsu":
+                            cell.ProcessOtsu();
+                            break;
+                        default:
+                            Console.WriteLine("Invaild mode");
+                            break;
+                    }
+                }
+            }
         }
 
         static void ShowHelp() {
@@ -223,7 +242,7 @@ Binarization FilePath Mode [Param]
                     SrcBmp.SetPixel(j, i, Buffer[j, i]);
                 }
             }
-            SrcBmp.Save(Path.GetDirectoryName(FilePath) + @"\c_" + Path.GetFileName(FilePath), ImageFormat.Png);
+            SrcBmp.Save(Path.GetDirectoryName(FilePath) + @"\" + Path.GetFileNameWithoutExtension(FilePath) + Mode + @".png", ImageFormat.Png);
             Console.WriteLine("Saved.");
         }
 
